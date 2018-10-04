@@ -236,7 +236,16 @@ git_wtree_cmd_tool_pushd() {
 git_wtree() {
     [ 0 -eq $# ] && _git_wtree_set_last_error "Command expected: new, drop, locate" && _git_wtree_show_last_error && return
 
-    cmd=git_wtree_cmd_$1
+    case "$1" in
+        cd|pushd)
+            cmd=tool_$1
+            ;;
+        *)
+            cmd=$1
+            ;;
+    esac
+
+    cmd=git_wtree_cmd_$cmd
     shift
 
     ${cmd} $*

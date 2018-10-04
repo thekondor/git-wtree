@@ -1,5 +1,9 @@
 #!/bin/sh
 
+###
+### Naive smoke tests
+###
+
 . $(dirname $0)/git-wtree.sh
 
 #set -e
@@ -8,7 +12,7 @@ SELF_PID=$$
 SELF_ROOT=$(readlink -e $(dirname $0))
 FIXED_FAKE_ROOT=/tmp/git-wtree-test.root
 FAKE_ROOT=$([ -z "${GIT_WTREE_TEST_FIXED_ROOT}" ] && mktemp -d || (mkdir ${FIXED_FAKE_ROOT} && ${FIXED_FAKE_ROOT}))
-trap cleanup  KILL QUIT EXIT
+trap cleanup KILL QUIT EXIT
 
 fail() {
     echo -n "*** FAILED: "
@@ -72,10 +76,19 @@ worktrees=$(git_wtree_cmd_ls | grep -E '^master|^test-branch-name' | wc -l)
 
 echo "= TEST(cd)"
 echo "== PWD is changed to worktree"
-pwd | grep -qi ${FAKE_ROOT}/main.git
-[ 0 -eq $? ] || fail "initial directory is main fake root"
-git_wtree_cmd_tool_cd test-branch-name 2>&1
-[ x"${FAKE_ROOT}/test-branch.d" = x"$(pwd)" ] || fail "current directory is test-branche's one"
+original_pwd=${PWD}
+worktree_dir=NONE
+for tested_cmd in git_wtree_cmd_tool_cd "git_wtree cd"; do
+    pwd | grep -qi ${FAKE_ROOT}/main.git
+    [ 0 -eq $? ] || fail "initial directory is main fake root"
+
+    ${tested_cmd} test-branch-name 2>&1
+    [ x"${FAKE_ROOT}/test-branch.d" = x"$(pwd)" ] || fail "current directory is test-branche's one"
+    worktree_dir="$(pwd)"
+    cd ${original_pwd}
+done
+### Next test depends on starting from worktree dir
+cd ${worktree_dir}
 
 echo "== PWD is changed to master"
 pwd | grep -qi ${FAKE_ROOT}/test-branch.d
